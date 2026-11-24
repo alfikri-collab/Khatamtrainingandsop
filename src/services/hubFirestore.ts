@@ -155,88 +155,181 @@ export async function adminUpdateUser(
   }
 }
 
+async function getExistingIds(collectionName: string): Promise<Set<string>> {
+  const colRef = collection(db, collectionName);
+  const q =
+    collectionName === 'roles'
+      ? query(colRef, where('sortOrder', '>=', 1))
+      : colRef;
+  const snap = await getDocs(q);
+  return new Set(snap.docs.map((d) => d.id));
+}
+
 export async function seedHubCatalog(adminUid: string, adminName: string): Promise<void> {
   // Batch 1: Roles & Categories (must commit before Modules and SOPs due to exists() rules)
   try {
+    const [
+      existingRoles,
+      existingTrnCats,
+      existingSopCats,
+      existingTrnMods,
+      existingSops,
+      existingLinks,
+      existingForms,
+      existingFaqs,
+      existingAnns,
+    ] = await Promise.all([
+      getExistingIds('roles'),
+      getExistingIds('trainingCategories'),
+      getExistingIds('sopCategories'),
+      getExistingIds('trainingModules'),
+      getExistingIds('sopDocuments'),
+      getExistingIds('quickLinks'),
+      getExistingIds('formsTemplates'),
+      getExistingIds('faqs'),
+      getExistingIds('announcements'),
+    ]);
+
     const batch1 = writeBatch(db);
+    let batch1Count = 0;
+
     SEED_ROLES.forEach((role) => {
-      batch1.set(doc(db, 'roles', sanitizeId(role.code)), role);
+      const docId = sanitizeId(role.code);
+      if (!existingRoles.has(docId)) {
+        batch1.set(doc(db, 'roles', docId), role);
+        batch1Count++;
+      }
     });
-    buildSeedTrainingCategories().forEach((cat) => {
-      batch1.set(doc(db, 'trainingCategories', sanitizeId(cat.id)), {
-        ...cat,
-        updatedAt: serverTimestamp(),
-      });
+
+    buildSeedTrainingCategories().forEach(({ id, ...catData }) => {
+      const docId = sanitizeId(id);
+      if (!existingTrnCats.has(docId)) {
+        batch1.set(doc(db, 'trainingCategories', docId), {
+          ...catData,
+          updatedAt: serverTimestamp(),
+        });
+        batch1Count++;
+      }
     });
-    buildSeedSopCategories().forEach((cat) => {
-      batch1.set(doc(db, 'sopCategories', sanitizeId(cat.id)), {
-        ...cat,
-        updatedAt: serverTimestamp(),
-      });
+
+    buildSeedSopCategories().forEach(({ id, ...catData }) => {
+      const docId = sanitizeId(id);
+      if (!existingSopCats.has(docId)) {
+        batch1.set(doc(db, 'sopCategories', docId), {
+          ...catData,
+          updatedAt: serverTimestamp(),
+        });
+        batch1Count++;
+      }
     });
-    await batch1.commit();
+
+    if (batch1Count > 0) {
+      await batch1.commit();
+    }
 
     // Batch 2: Training Modules & SOP Documents
     const modules = buildSeedTrainingModules(adminUid);
     const sops = buildSeedSopDocuments(adminUid);
     const batch2 = writeBatch(db);
-    modules.forEach((mod) => {
-      batch2.set(doc(db, 'trainingModules', sanitizeId(mod.id)), {
-        ...mod,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+    let batch2Count = 0;
+
+    modules.forEach(({ id, ...modData }) => {
+      const docId = sanitizeId(id);
+      if (!existingTrnMods.has(docId)) {
+        batch2.set(doc(db, 'trainingModules', docId), {
+          ...modData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch2Count++;
+      }
     });
-    sops.forEach((sop) => {
-      batch2.set(doc(db, 'sopDocuments', sanitizeId(sop.id)), {
-        ...sop,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+
+    sops.forEach(({ id, ...sopData }) => {
+      const docId = sanitizeId(id);
+      if (!existingSops.has(docId)) {
+        batch2.set(doc(db, 'sopDocuments', docId), {
+          ...sopData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch2Count++;
+      }
     });
-    await batch2.commit();
+
+    if (batch2Count > 0) {
+      await batch2.commit();
+    }
 
     // Batch 3: Quick Links, Forms, FAQs, Announcements, and initial Version History
     const batch3 = writeBatch(db);
-    buildSeedQuickLinks(adminUid).forEach((link) => {
-      batch3.set(doc(db, 'quickLinks', sanitizeId(link.id)), {
-        ...link,
+    let batch3Count = 0;
+
+    buildSeedQuickLinks(adminUid).forEach(({ id, ...linkData }) => {
+      const docId = sanitizeId(id);
+      if (!existingLinks.has(docId)) {
+        batch3.set(doc(db, 'quickLinks', docId), {
+          ...linkData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch3Count++;
+      }
+    });
+
+    buildSeedForms(adminUid).forEach(({ id, ...formData }) => {
+      const docId = sanitizeId(id);
+      if (!existingForms.has(docId)) {
+        batch3.set(doc(db, 'formsTemplates', docId), {
+          ...formData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch3Count++;
+      }
+    });
+
+    buildSeedFaqs(adminUid).forEach(({ id, ...faqData }) => {
+      const docId = sanitizeId(id);
+      if (!existingFaqs.has(docId)) {
+        batch3.set(doc(db, 'faqs', docId), {
+          ...faqData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch3Count++;
+      }
+    });
+
+    buildSeedAnnouncements(adminUid).forEach(({ id, ...annData }) => {
+      const docId = sanitizeId(id);
+      if (!existingAnns.has(docId)) {
+        batch3.set(doc(db, 'announcements', docId), {
+          ...annData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch3Count++;
+      }
+    });
+
+    if (batch1Count + batch2Count + batch3Count > 0) {
+      batch3.set(doc(db, 'versionHistory', sanitizeId(`hist_seed_${Date.now()}`)), {
+        entityType: 'sop',
+        entityId: 'sop_a_001',
+        entityTitle: 'Khatam Retail Initial Hub Catalog',
+        version: '1.0',
+        changeSummary: `Synchronized ${modules.length} training modules, ${sops.length} SOP templates, quick links, forms, FAQs, and announcements.`,
+        changedBy: adminUid,
+        changedByName: adminName.slice(0, 120) || 'System Admin',
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
-    });
-    buildSeedForms(adminUid).forEach((form) => {
-      batch3.set(doc(db, 'formsTemplates', sanitizeId(form.id)), {
-        ...form,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    });
-    buildSeedFaqs(adminUid).forEach((faq) => {
-      batch3.set(doc(db, 'faqs', sanitizeId(faq.id)), {
-        ...faq,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    });
-    buildSeedAnnouncements(adminUid).forEach((ann) => {
-      batch3.set(doc(db, 'announcements', sanitizeId(ann.id)), {
-        ...ann,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    });
-    batch3.set(doc(db, 'versionHistory', sanitizeId(`hist_seed_${Date.now()}`)), {
-      entityType: 'sop',
-      entityId: 'sop_a_001',
-      entityTitle: 'Khatam Retail Initial Hub Catalog',
-      version: '1.0',
-      changeSummary: `Initialized ${modules.length} training modules, ${sops.length} SOP templates, quick links, forms, FAQs, and announcements.`,
-      changedBy: adminUid,
-      changedByName: adminName.slice(0, 120) || 'System Admin',
-      createdAt: serverTimestamp(),
-    });
-    await batch3.commit();
+      batch3Count++;
+    }
+
+    if (batch3Count > 0) {
+      await batch3.commit();
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'seedHubCatalog');
   }
@@ -244,8 +337,11 @@ export async function seedHubCatalog(adminUid: string, adminName: string): Promi
 
 export async function checkCatalogNeedsSeed(): Promise<boolean> {
   try {
-    const snap = await getDocs(query(collection(db, 'trainingCategories'), where('isActive', '==', true)));
-    return snap.empty;
+    const [catSnap, sopSnap] = await Promise.all([
+      getDocs(query(collection(db, 'trainingCategories'), where('isActive', '==', true))),
+      getDocs(collection(db, 'sopDocuments')),
+    ]);
+    return catSnap.empty || sopSnap.empty;
   } catch {
     return false;
   }
@@ -272,7 +368,21 @@ export function subscribeCollection<T>(
     ? query(colRef, where('status', '==', 'published'))
     : options.onlyActiveCategory
       ? query(colRef, where('isActive', '==', true))
-      : colRef;
+      : collectionName === 'roles'
+        ? query(colRef, where('sortOrder', '>=', 1))
+        : collectionName === 'versionHistory'
+          ? query(
+              colRef,
+              where('entityType', 'in', [
+                'sop',
+                'training',
+                'quickLink',
+                'form',
+                'faq',
+                'announcement',
+              ])
+            )
+          : colRef;
 
   return onSnapshot(
     q,

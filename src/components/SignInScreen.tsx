@@ -22,17 +22,9 @@ export function SignInScreen({ onSignIn, error }: SignInScreenProps) {
     <div className="min-h-screen bg-zinc-50 flex flex-col justify-between">
       <header className="w-full border-b border-zinc-200 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-8">
-          <div className="flex items-center gap-3 shrink-0">
-            <img
-              src="/src/assets/images/khatam_brand_mark_1795408356025.jpg"
-              alt="Khatam Retail emblem"
-              referrerPolicy="no-referrer"
-              className="w-8 h-8 rounded object-cover border border-zinc-200"
-            />
-            <span className="font-display font-bold text-base tracking-tight text-zinc-900 whitespace-nowrap">
-              Khatam Retail Hub
-            </span>
-          </div>
+          <span className="font-display font-bold text-base tracking-tight text-zinc-900 whitespace-nowrap shrink-0">
+            Khatam Retail Hub
+          </span>
           <span className="text-xs text-zinc-500 whitespace-nowrap hidden sm:inline">
             Internal Retail Operations &amp; Learning Portal
           </span>

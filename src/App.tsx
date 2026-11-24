@@ -303,21 +303,6 @@ export default function App() {
 
   const highPriorityCount = publishedAnnouncements.filter((a) => a.priority === 'High').length;
 
-  if (!authReady) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
-        <div className="text-center space-y-2">
-          <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-600">Loading Khatam Retail Hub...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return <SignInScreen onSignIn={handleSignIn} error={authError} />;
-  }
-
   const activeNavMeta = NAV_ITEMS.find((n) => n.id === activeSection) || NAV_ITEMS[0];
 
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(() => {
@@ -433,22 +418,25 @@ export default function App() {
     sopDocuments,
   ]);
 
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
+        <div className="text-center space-y-2">
+          <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-zinc-600">Loading Khatam Retail Hub...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return <SignInScreen onSignIn={handleSignIn} error={authError} />;
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-zinc-200 z-30">
-        <div className="px-5 py-4 border-b border-zinc-200 flex items-center gap-3">
-          <img
-            src="/src/assets/images/khatam_brand_mark_1795408356025.jpg"
-            alt="Khatam Retail emblem"
-            referrerPolicy="no-referrer"
-            className="w-8 h-8 rounded object-cover border border-zinc-200 shrink-0"
-          />
-          <span className="font-display font-bold text-sm tracking-tight text-zinc-900 whitespace-nowrap">
-            Khatam Retail Hub
-          </span>
-        </div>
-
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Main Navigation">
           {NAV_ITEMS.filter(
             (item) => !item.requiresManagement || canManageContent(userProfile.role)
@@ -508,18 +496,7 @@ export default function App() {
             onClick={() => setMobileMenuOpen(false)}
           />
           <aside className="relative w-72 max-w-[85vw] bg-white h-full border-r border-zinc-200 flex flex-col z-10">
-            <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/src/assets/images/khatam_brand_mark_1795408356025.jpg"
-                  alt="Khatam Retail emblem"
-                  referrerPolicy="no-referrer"
-                  className="w-7 h-7 rounded object-cover border border-zinc-200"
-                />
-                <span className="font-display font-bold text-sm text-zinc-900">
-                  Khatam Retail Hub
-                </span>
-              </div>
+            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
