@@ -79,7 +79,7 @@ export function SignInScreen({ onSignIn, error }: SignInScreenProps) {
                     Role-Based Access
                   </div>
                   <p className="text-xs text-zinc-600">
-                    Dedicated views for Retail Staff, Outlet Managers, Area Supervisors, and Admin.
+                    Dedicated views for Retail Staff, Outlet Supervisors &amp; Team Leaders, Area Supervisors, and Admin.
                   </p>
                 </div>
               </div>

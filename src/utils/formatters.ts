@@ -32,7 +32,7 @@ export function getRoleLabel(role: RoleCode): string {
     ADMIN: 'System Admin',
     RETAIL_MANAGEMENT: 'Retail Management',
     AREA_SUPERVISOR: 'Area Supervisor',
-    OUTLET_MANAGER: 'Outlet Manager',
+    OUTLET_MANAGER: 'Outlet Supervisor & Team Leader',
     RETAIL_STAFF: 'Retail Staff',
   };
   return labels[role] || 'Retail Staff';

@@ -43,7 +43,7 @@ import {
   seedHubCatalog,
   setDocumentStatus,
 } from '../services/hubFirestore';
-import { canManageContent, canManageUsers, formatFirestoreDate } from '../utils/formatters';
+import { canManageContent, canManageUsers, formatFirestoreDate, getRoleLabel } from '../utils/formatters';
 
 interface AdminManagementViewProps {
   userProfile: UserProfile;
@@ -260,7 +260,7 @@ export function AdminManagementView({
                     categoryId: sopCategories[0]?.id || '',
                     purpose: '',
                     scope: 'All Khatam Retail outlets and retail team members.',
-                    personInCharge: 'Outlet Manager',
+                    personInCharge: 'Outlet Supervisor & Team Leader',
                     procedures: ['Step 1: Enter approved operational procedure.'],
                     reminders: ['Verify effective date before floor execution.'],
                     relatedDocuments: '',
@@ -781,7 +781,9 @@ export function AdminManagementView({
                 .map((r) => (
                   <div key={r.id} className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200">
                     <p className="text-xs font-mono font-semibold text-[#78561D]">{r.code}</p>
-                    <p className="text-sm font-semibold text-zinc-900 mt-0.5">{r.label}</p>
+                    <p className="text-sm font-semibold text-zinc-900 mt-0.5">
+                      {r.code === 'OUTLET_MANAGER' ? getRoleLabel(r.code) : r.label}
+                    </p>
                     <p className="text-xs text-zinc-600 mt-1 leading-relaxed">{r.description}</p>
                   </div>
                 ))}
@@ -817,7 +819,10 @@ export function AdminManagementView({
                         <td className="py-2.5 px-4 font-medium text-zinc-900">{u.displayName}</td>
                         <td className="py-2.5 px-4 text-xs text-zinc-600">{u.outletName}</td>
                         <td className="py-2.5 px-4 text-xs text-zinc-600">{u.department}</td>
-                        <td className="py-2.5 px-4 font-mono text-xs text-zinc-700">{u.role}</td>
+                        <td className="py-2.5 px-4 text-xs text-zinc-700">
+                          <span className="font-medium text-zinc-900">{getRoleLabel(u.role)}</span>
+                          <span className="ml-1.5 font-mono text-[11px] text-zinc-500">({u.role})</span>
+                        </td>
                         <td className="py-2.5 px-4 text-xs capitalize text-zinc-600">{u.status}</td>
                         <td className="py-2.5 px-4 text-right">
                           <button
@@ -1568,7 +1573,7 @@ export function AdminManagementView({
                   { value: 'ADMIN', label: 'ADMIN — Full Control' },
                   { value: 'RETAIL_MANAGEMENT', label: 'RETAIL_MANAGEMENT — Content & SOPs' },
                   { value: 'AREA_SUPERVISOR', label: 'AREA_SUPERVISOR' },
-                  { value: 'OUTLET_MANAGER', label: 'OUTLET_MANAGER' },
+                  { value: 'OUTLET_MANAGER', label: 'OUTLET_MANAGER — Outlet Supervisor & Team Leader' },
                   { value: 'RETAIL_STAFF', label: 'RETAIL_STAFF' },
                 ]}
                 onChange={(v) => setEditingUser({ ...editingUser, role: v as RoleCode })}

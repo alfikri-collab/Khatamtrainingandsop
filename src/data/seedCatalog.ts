@@ -37,7 +37,7 @@ export const SEED_ROLES: Omit<RoleDefinition, 'id'>[] = [
   },
   {
     code: 'OUTLET_MANAGER',
-    label: 'Outlet Manager',
+    label: 'Outlet Supervisor & Team Leader',
     description: 'View training modules, outlet SOPs, staff management forms, operational checklists, and quick links.',
     canManageContent: false,
     canManageUsers: false,
@@ -436,8 +436,8 @@ export function buildSeedSopDocuments(adminUid: string): Omit<SopDocument, 'crea
         title,
         categoryId: cat.id,
         purpose: `Editable placeholder template for ${title}. Retail Management will populate the approved operational purpose here.`,
-        scope: 'All Khatam Retail outlets, outlet managers, senior sales assistants, and floor staff (pending management approval).',
-        personInCharge: 'Outlet Manager / Shift Supervisor',
+        scope: 'All Khatam Retail outlets, outlet supervisors, team leaders, senior sales assistants, and floor staff (pending management approval).',
+        personInCharge: 'Outlet Supervisor & Team Leader / Shift Supervisor',
         procedures: [
           `[Placeholder Step 1] Prepare required tools, forms, and system access before initiating ${title}.`,
           `[Placeholder Step 2] Execute the management-approved ${title} checklist and verify accuracy.`,
@@ -473,14 +473,14 @@ export function buildSeedQuickLinks(adminUid: string): Omit<QuickLink, 'createdA
     { title: 'Xilnex', category: 'Sales & Reporting', iconName: 'Database', description: 'Launch Xilnex cloud POS & retail back-office portal.', accessInstructions: 'Sign in with assigned outlet Xilnex ID. Placeholder URL — configure in Admin.' },
     { title: 'Retail Sales Dashboard', category: 'Sales & Reporting', iconName: 'BarChart3', description: 'Real-time overview of daily and monthly retail outlet sales performance.', accessInstructions: 'Requires Khatam Google Workspace login.' },
     { title: 'Daily Sales Report', category: 'Sales & Reporting', iconName: 'FileSpreadsheet', description: 'Submit and review outlet daily sales summary figures.', accessInstructions: 'Submit before outlet closing cut-off time.' },
-    { title: 'Outlet Performance Dashboard', category: 'Sales & Reporting', iconName: 'TrendingUp', description: 'Compare target vs actual KPIs across retail outlets.', accessInstructions: 'Accessible to Outlet Managers, Area Supervisors, and Management.' },
+    { title: 'Outlet Performance Dashboard', category: 'Sales & Reporting', iconName: 'TrendingUp', description: 'Compare target vs actual KPIs across retail outlets.', accessInstructions: 'Accessible to Outlet Supervisors & Team Leaders, Area Supervisors, and Management.' },
     { title: 'Footfall Dashboard', category: 'Sales & Reporting', iconName: 'Footprints', description: 'Track daily visitor counts and peak-hour store traffic.', accessInstructions: 'Updated automatically via store counter integration.' },
     { title: 'Conversion Rate Tracking', category: 'Sales & Reporting', iconName: 'Percent', description: 'Monitor walk-in to transaction conversion ratios by outlet.', accessInstructions: 'Cross-reference with Footfall and Daily Sales figures.' },
     { title: 'Google Review Tracking', category: 'Sales & Reporting', iconName: 'Star', description: 'Log and monitor outlet Google Maps customer review scores and responses.', accessInstructions: 'Respond to all reviews within 24 hours per SOP.' },
 
     // Inventory & Stock
     { title: 'Stock Transfer Form', category: 'Inventory & Stock', iconName: 'ArrowLeftRight', description: 'Record inter-outlet or HQ-to-outlet stock transfers.', accessInstructions: 'Complete form prior to dispatching physical cartons.' },
-    { title: 'Stock Adjustment Form', category: 'Inventory & Stock', iconName: 'SlidersHorizontal', description: 'Request inventory quantity adjustments for damaged or variance items.', accessInstructions: 'Requires Outlet Manager and Area Supervisor verification.' },
+    { title: 'Stock Adjustment Form', category: 'Inventory & Stock', iconName: 'SlidersHorizontal', description: 'Request inventory quantity adjustments for damaged or variance items.', accessInstructions: 'Requires Outlet Supervisor & Team Leader and Area Supervisor verification.' },
     { title: 'Stock Count Sheet', category: 'Inventory & Stock', iconName: 'ClipboardCheck', description: 'Cycle count and full stocktake recording sheet.', accessInstructions: 'Duplicate template tab per outlet stocktake date.' },
     { title: 'RFID System', category: 'Inventory & Stock', iconName: 'Radio', description: 'Open RFID tagging, scanning, and inventory audit portal.', accessInstructions: 'Ensure handheld RFID reader is paired before scanning.' },
     { title: 'Marksold System', category: 'Inventory & Stock', iconName: 'Tag', description: 'Access Marksold counter and garment tracking portal.', accessInstructions: 'Verify counter sync at start and end of each shift.' },
@@ -489,11 +489,11 @@ export function buildSeedQuickLinks(adminUid: string): Omit<QuickLink, 'createdA
 
     // HR & Staff Management
     { title: 'Staff Scheduling', category: 'HR & Staff Management', iconName: 'CalendarDays', description: 'Outlet weekly shift roster and coverage planning sheet.', accessInstructions: 'Publish next week roster by Thursday 6:00 PM.' },
-    { title: 'Attendance Adjustment Form', category: 'HR & Staff Management', iconName: 'Clock', description: 'Submit clock-in/clock-out correction requests with reason.', accessInstructions: 'Requires Outlet Manager acknowledgement.' },
+    { title: 'Attendance Adjustment Form', category: 'HR & Staff Management', iconName: 'Clock', description: 'Submit clock-in/clock-out correction requests with reason.', accessInstructions: 'Requires Outlet Supervisor & Team Leader acknowledgement.' },
     { title: 'Leave Application', category: 'HR & Staff Management', iconName: 'CalendarCheck', description: 'Submit annual, medical, or emergency leave requests.', accessInstructions: 'Apply at least 7 days ahead for planned annual leave.' },
-    { title: 'Shift Change Request', category: 'HR & Staff Management', iconName: 'RefreshCw', description: 'Request and log approved shift swaps between outlet staff.', accessInstructions: 'Both staff members and Outlet Manager must approve.' },
+    { title: 'Shift Change Request', category: 'HR & Staff Management', iconName: 'RefreshCw', description: 'Request and log approved shift swaps between outlet staff.', accessInstructions: 'Both staff members and Outlet Supervisor & Team Leader must approve.' },
     { title: 'Overtime Form', category: 'HR & Staff Management', iconName: 'Timer', description: 'Record pre-approved retail overtime hours for payroll verification.', accessInstructions: 'Pre-approval from Area Supervisor is required.' },
-    { title: 'Staff Evaluation Form', category: 'HR & Staff Management', iconName: 'UserCheck', description: 'Monthly and probation retail staff performance appraisal form.', accessInstructions: 'For Outlet Managers and Area Supervisors.' },
+    { title: 'Staff Evaluation Form', category: 'HR & Staff Management', iconName: 'UserCheck', description: 'Monthly and probation retail staff performance appraisal form.', accessInstructions: 'For Outlet Supervisors & Team Leaders and Area Supervisors.' },
     { title: 'New Joiner Information Form', category: 'HR & Staff Management', iconName: 'UserPlus', description: 'Collect onboarding details and system access setup for new hires.', accessInstructions: 'Complete on Day 1 of outlet onboarding.' },
 
     // Visual Merchandising
@@ -562,7 +562,7 @@ export function buildSeedFaqs(adminUid: string): Omit<FaqEntry, 'createdAt' | 'u
     {
       id: 'faq_001',
       question: 'What should I do if the POS system is down?',
-      answer: 'Check outlet network connectivity first, notify your Outlet Manager and IT/POS Support immediately via the Retail Communication Directory, and follow the approved manual receipt fallback procedure until POS connectivity is restored.',
+      answer: 'Check outlet network connectivity first, notify your Outlet Supervisor & Team Leader and IT/POS Support immediately via the Retail Communication Directory, and follow the approved manual receipt fallback procedure until POS connectivity is restored.',
       category: 'Sales & Cashier',
       sopRef: 'SOP-SCM-001',
       quickLinkUrl: '',
@@ -584,7 +584,7 @@ export function buildSeedFaqs(adminUid: string): Omit<FaqEntry, 'createdAt' | 'u
     {
       id: 'faq_003',
       question: 'How do I request a shift change?',
-      answer: 'Coordinate coverage with a qualified team member, submit the Shift Change Request form in Quick Links, and obtain approval from your Outlet Manager before the shift begins.',
+      answer: 'Coordinate coverage with a qualified team member, submit the Shift Change Request form in Quick Links, and obtain approval from your Outlet Supervisor & Team Leader before the shift begins.',
       category: 'HR & Scheduling',
       sopRef: 'SOP-HRM-003',
       quickLinkUrl: '',
@@ -595,7 +595,7 @@ export function buildSeedFaqs(adminUid: string): Omit<FaqEntry, 'createdAt' | 'u
     {
       id: 'faq_004',
       question: 'What should I do if there is a stock discrepancy?',
-      answer: 'Recount the affected SKU bin and check recent transfers or pending sales. Log the variance in the Stock Discrepancy Report and notify your Outlet Manager and Area Supervisor for stock adjustment verification.',
+      answer: 'Recount the affected SKU bin and check recent transfers or pending sales. Log the variance in the Stock Discrepancy Report and notify your Outlet Supervisor & Team Leader and Area Supervisor for stock adjustment verification.',
       category: 'Inventory & Stock',
       sopRef: 'SOP-OAR-007',
       quickLinkUrl: '',
@@ -617,7 +617,7 @@ export function buildSeedFaqs(adminUid: string): Omit<FaqEntry, 'createdAt' | 'u
     {
       id: 'faq_006',
       question: 'What is the procedure for customer refunds?',
-      answer: 'Inspect the receipt, purchase date, item condition, and tag integrity against Khatam exchange/refund eligibility rules. Escalate refund approvals to the Outlet Manager per SOP-SCM-006 and SOP-CSM-005.',
+      answer: 'Inspect the receipt, purchase date, item condition, and tag integrity against Khatam exchange/refund eligibility rules. Escalate refund approvals to the Outlet Supervisor & Team Leader per SOP-SCM-006 and SOP-CSM-005.',
       category: 'Customer Service',
       sopRef: 'SOP-SCM-006',
       quickLinkUrl: '',
@@ -680,7 +680,7 @@ export function buildSeedAnnouncements(adminUid: string): Omit<Announcement, 'cr
     {
       id: 'ann_004',
       title: 'Daily Closing & Stock Discrepancy Reporting Reminder',
-      description: 'Outlet Managers are reminded to submit Daily Closing Reports nightly and log any inbound or cycle count variances within 24 hours.',
+      description: 'Outlet Supervisors & Team Leaders are reminded to submit Daily Closing Reports nightly and log any inbound or cycle count variances within 24 hours.',
       category: 'Revised Procedure',
       priority: 'High',
       relatedUrl: '',

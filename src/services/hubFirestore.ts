@@ -198,6 +198,15 @@ export async function seedHubCatalog(adminUid: string, adminName: string): Promi
       if (!existingRoles.has(docId)) {
         batch1.set(doc(db, 'roles', docId), role);
         batch1Count++;
+      } else {
+        batch1.update(doc(db, 'roles', docId), {
+          label: role.label,
+          description: role.description,
+          canManageContent: role.canManageContent,
+          canManageUsers: role.canManageUsers,
+          sortOrder: role.sortOrder,
+        });
+        batch1Count++;
       }
     });
 
