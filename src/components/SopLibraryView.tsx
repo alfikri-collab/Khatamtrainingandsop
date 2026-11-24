@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  Clock,
   Download,
   ExternalLink,
   Printer,
@@ -16,7 +17,13 @@ import type {
   UserProfile,
   UserProgress,
 } from '../types/hub';
-import { canManageContent, formatFirestoreDate, isSafeExternalUrl } from '../utils/formatters';
+import {
+  canManageContent,
+  formatFirestoreDate,
+  formatReadingTime,
+  getSopReadingMinutes,
+  isSafeExternalUrl,
+} from '../utils/formatters';
 import { HubIcon } from './IconResolver';
 
 interface SopLibraryViewProps {
@@ -261,6 +268,7 @@ export function SopLibraryView({
                       <th className="py-3 px-4 font-medium">SOP Ref</th>
                       <th className="py-3 px-4 font-medium">SOP Title</th>
                       <th className="py-3 px-4 font-medium">Person in Charge</th>
+                      <th className="py-3 px-4 font-medium">Est. Read</th>
                       <th className="py-3 px-4 font-medium">Document Status</th>
                       <th className="py-3 px-4 font-medium">Version</th>
                       <th className="py-3 px-4 font-medium text-right">Action</th>
@@ -285,6 +293,12 @@ export function SopLibraryView({
                           </td>
                           <td className="py-3 px-4 text-xs text-zinc-600">
                             {sop.personInCharge}
+                          </td>
+                          <td className="py-3 px-4 text-xs font-mono tabular-nums text-zinc-600 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                              {formatReadingTime(getSopReadingMinutes(sop))}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-xs whitespace-nowrap">
                             <span
@@ -334,8 +348,17 @@ export function SopLibraryView({
           <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-mono text-zinc-500 tabular-nums">
-                  {activeSop.sopCode} · Version {activeSop.version} · Updated {formatFirestoreDate(activeSop.updatedAt)}
+                <p className="text-xs font-mono text-zinc-500 tabular-nums flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>{activeSop.sopCode}</span>
+                  <span>·</span>
+                  <span>Version {activeSop.version}</span>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 text-zinc-700 font-medium">
+                    <Clock className="w-3.5 h-3.5 text-[#9A732E]" />
+                    {formatReadingTime(getSopReadingMinutes(activeSop))}
+                  </span>
+                  <span>·</span>
+                  <span>Updated {formatFirestoreDate(activeSop.updatedAt)}</span>
                 </p>
                 <h2 className="text-xl font-semibold text-zinc-900 mt-0.5">
                   {activeSop.title}

@@ -46,6 +46,10 @@ import type {
   UserProgress,
   VersionHistoryEntry,
 } from '../types/hub';
+import {
+  calculateSopReadingMinutes,
+  calculateTrainingReadingMinutes,
+} from '../utils/formatters';
 
 function sanitizeId(raw: string): string {
   const cleaned = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
@@ -165,6 +169,20 @@ async function getExistingIds(collectionName: string): Promise<Set<string>> {
   return new Set(snap.docs.map((d) => d.id));
 }
 
+async function getExistingDocsMap(collectionName: string): Promise<Map<string, Record<string, unknown>>> {
+  const colRef = collection(db, collectionName);
+  const q =
+    collectionName === 'roles'
+      ? query(colRef, where('sortOrder', '>=', 1))
+      : colRef;
+  const snap = await getDocs(q);
+  const map = new Map<string, Record<string, unknown>>();
+  snap.docs.forEach((d) => {
+    map.set(d.id, d.data() as Record<string, unknown>);
+  });
+  return map;
+}
+
 export async function seedHubCatalog(adminUid: string, adminName: string): Promise<void> {
   // Batch 1: Roles & Categories (must commit before Modules and SOPs due to exists() rules)
   try {
@@ -182,8 +200,8 @@ export async function seedHubCatalog(adminUid: string, adminName: string): Promi
       getExistingIds('roles'),
       getExistingIds('trainingCategories'),
       getExistingIds('sopCategories'),
-      getExistingIds('trainingModules'),
-      getExistingIds('sopDocuments'),
+      getExistingDocsMap('trainingModules'),
+      getExistingDocsMap('sopDocuments'),
       getExistingIds('quickLinks'),
       getExistingIds('formsTemplates'),
       getExistingIds('faqs'),
@@ -254,12 +272,40 @@ export async function seedHubCatalog(adminUid: string, adminName: string): Promi
       }
     });
 
+    existingTrnMods.forEach((existingData, docId) => {
+      if (typeof existingData.estimatedReadingMinutes !== 'number') {
+        const estimatedReadingMinutes = calculateTrainingReadingMinutes(
+          existingData as Partial<TrainingModule>
+        );
+        batch2.update(doc(db, 'trainingModules', docId), {
+          estimatedReadingMinutes,
+          updatedBy: adminUid,
+          updatedAt: serverTimestamp(),
+        });
+        batch2Count++;
+      }
+    });
+
     sops.forEach(({ id, ...sopData }) => {
       const docId = sanitizeId(id);
       if (!existingSops.has(docId)) {
         batch2.set(doc(db, 'sopDocuments', docId), {
           ...sopData,
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        batch2Count++;
+      }
+    });
+
+    existingSops.forEach((existingData, docId) => {
+      if (typeof existingData.estimatedReadingMinutes !== 'number') {
+        const estimatedReadingMinutes = calculateSopReadingMinutes(
+          existingData as Partial<SopDocument>
+        );
+        batch2.update(doc(db, 'sopDocuments', docId), {
+          estimatedReadingMinutes,
+          updatedBy: adminUid,
           updatedAt: serverTimestamp(),
         });
         batch2Count++;
@@ -482,7 +528,7 @@ export async function saveTrainingModule(
 ): Promise<void> {
   const id = sanitizeId(data.id || `trn_${Date.now()}`);
   const path = `trainingModules/${id}`;
-  const payload = {
+  const cleanFields = {
     categoryId: sanitizeId(data.categoryId),
     title: data.title.trim().slice(0, 180),
     description: data.description.trim().slice(0, 800),
@@ -494,6 +540,10 @@ export async function saveTrainingModule(
     relatedSopCode: data.relatedSopCode.trim().slice(0, 60),
     relatedFormTitle: data.relatedFormTitle.trim().slice(0, 180),
     quizUrl: data.quizUrl.trim().slice(0, 500),
+  };
+  const payload = {
+    ...cleanFields,
+    estimatedReadingMinutes: calculateTrainingReadingMinutes(cleanFields),
     status: data.status,
     updatedBy: actorUid,
     updatedAt: serverTimestamp(),
@@ -531,7 +581,7 @@ export async function saveSopDocument(
 ): Promise<void> {
   const id = sanitizeId(data.id || `sop_${Date.now()}`);
   const path = `sopDocuments/${id}`;
-  const payload = {
+  const cleanFields = {
     sopCode: data.sopCode.trim().slice(0, 40),
     title: data.title.trim().slice(0, 180),
     categoryId: sanitizeId(data.categoryId),
@@ -545,6 +595,10 @@ export async function saveSopDocument(
     version: data.version.trim().slice(0, 20) || '1.0',
     relatedTrainingTitle: data.relatedTrainingTitle.trim().slice(0, 180),
     approvalStatus: data.approvalStatus,
+  };
+  const payload = {
+    ...cleanFields,
+    estimatedReadingMinutes: calculateSopReadingMinutes(cleanFields),
     status: data.status,
     updatedBy: actorUid,
     updatedAt: serverTimestamp(),

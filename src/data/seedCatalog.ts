@@ -9,6 +9,10 @@ import type {
   TrainingCategory,
   TrainingModule,
 } from '../types/hub';
+import {
+  calculateSopReadingMinutes,
+  calculateTrainingReadingMinutes,
+} from '../utils/formatters';
 
 export const SEED_ROLES: Omit<RoleDefinition, 'id'>[] = [
   {
@@ -386,7 +390,7 @@ export function buildSeedTrainingModules(adminUid: string): Omit<TrainingModule,
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_|_$/g, '');
-      result.push({
+      const modDraft = {
         id: `trn_${cat.code.toLowerCase()}_${idx + 1}_${slug.slice(0, 24)}`,
         categoryId: cat.id,
         title,
@@ -404,8 +408,12 @@ export function buildSeedTrainingModules(adminUid: string): Omit<TrainingModule,
         relatedSopCode: `${SEED_SOP_CATEGORIES[Math.min(cat.sortOrder - 1, 7)].sopPrefix}-001`,
         relatedFormTitle: `${title} Reference Checklist`,
         quizUrl: '',
-        status: 'published',
+        status: 'published' as const,
         updatedBy: adminUid,
+      };
+      result.push({
+        ...modDraft,
+        estimatedReadingMinutes: calculateTrainingReadingMinutes(modDraft),
       });
     });
   });
@@ -430,7 +438,7 @@ export function buildSeedSopDocuments(adminUid: string): Omit<SopDocument, 'crea
     cat.sops.forEach((title, idx) => {
       const num = String(idx + 1).padStart(3, '0');
       const sopCode = `${cat.sopPrefix}-${num}`;
-      result.push({
+      const sopDraft = {
         id: `sop_${cat.code.toLowerCase()}_${num}`,
         sopCode,
         title,
@@ -451,9 +459,13 @@ export function buildSeedSopDocuments(adminUid: string): Omit<SopDocument, 'crea
         pdfUrl: '',
         version: '0.1-template',
         relatedTrainingTitle: SEED_TRAINING_CATEGORIES[Math.min(cat.sortOrder - 1, 6)]?.modules[0] || 'Daily Outlet Operations',
-        approvalStatus: 'Placeholder Template',
-        status: 'published',
+        approvalStatus: 'Placeholder Template' as const,
+        status: 'published' as const,
         updatedBy: adminUid,
+      };
+      result.push({
+        ...sopDraft,
+        estimatedReadingMinutes: calculateSopReadingMinutes(sopDraft),
       });
     });
   });

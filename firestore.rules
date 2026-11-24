@@ -119,7 +119,7 @@ service cloud.firestore {
 
     function isValidTrainingModule(data) {
       return data.keys().hasAll(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'estimatedReadingMinutes', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
         isValidId(data.categoryId) &&
         isStringBounded(data.title, 1, 180) &&
         isStringBounded(data.description, 0, 800) &&
@@ -131,6 +131,7 @@ service cloud.firestore {
         isStringBounded(data.relatedSopCode, 0, 60) &&
         isStringBounded(data.relatedFormTitle, 0, 180) &&
         isStringBounded(data.quizUrl, 0, 500) &&
+        (!('estimatedReadingMinutes' in data) || (data.estimatedReadingMinutes is int && data.estimatedReadingMinutes >= 1 && data.estimatedReadingMinutes <= 240)) &&
         data.status in ['published', 'draft', 'archived'] &&
         data.updatedBy == request.auth.uid &&
         data.createdAt is timestamp &&
@@ -139,7 +140,7 @@ service cloud.firestore {
 
     function isValidSopDocument(data) {
       return data.keys().hasAll(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
-        data.keys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'estimatedReadingMinutes', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
         isStringBounded(data.sopCode, 1, 40) &&
         isStringBounded(data.title, 1, 180) &&
         isValidId(data.categoryId) &&
@@ -153,6 +154,7 @@ service cloud.firestore {
         isStringBounded(data.version, 1, 20) &&
         isStringBounded(data.relatedTrainingTitle, 0, 180) &&
         data.approvalStatus in ['Placeholder Template', 'Management Approved'] &&
+        (!('estimatedReadingMinutes' in data) || (data.estimatedReadingMinutes is int && data.estimatedReadingMinutes >= 1 && data.estimatedReadingMinutes <= 240)) &&
         data.status in ['published', 'draft', 'archived'] &&
         data.updatedBy == request.auth.uid &&
         data.createdAt is timestamp &&
@@ -293,11 +295,12 @@ service cloud.firestore {
       allow get: if isValidId(moduleId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
       allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
       allow create: if isValidId(moduleId) && isManagement() && isValidTrainingModule(incoming()) &&
+        'estimatedReadingMinutes' in incoming() &&
         incoming().createdAt == request.time &&
         exists(/databases/$(database)/documents/trainingCategories/$(incoming().categoryId));
       allow update: if isValidId(moduleId) && isManagement() && isValidTrainingModule(incoming()) &&
         incoming().createdAt == existing().createdAt &&
-        incoming().diff(existing()).affectedKeys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'updatedAt']);
+        incoming().diff(existing()).affectedKeys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'estimatedReadingMinutes', 'status', 'updatedBy', 'updatedAt']);
       allow delete: if isValidId(moduleId) && isAdmin();
     }
 
@@ -314,11 +317,12 @@ service cloud.firestore {
       allow get: if isValidId(sopId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
       allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
       allow create: if isValidId(sopId) && isManagement() && isValidSopDocument(incoming()) &&
+        'estimatedReadingMinutes' in incoming() &&
         incoming().createdAt == request.time &&
         exists(/databases/$(database)/documents/sopCategories/$(incoming().categoryId));
       allow update: if isValidId(sopId) && isManagement() && isValidSopDocument(incoming()) &&
         incoming().createdAt == existing().createdAt &&
-        incoming().diff(existing()).affectedKeys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'updatedAt']);
+        incoming().diff(existing()).affectedKeys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'estimatedReadingMinutes', 'status', 'updatedBy', 'updatedAt']);
       allow delete: if isValidId(sopId) && isAdmin();
     }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Archive,
   Check,
+  Clock,
   Edit3,
   Plus,
   RefreshCw,
@@ -43,7 +44,17 @@ import {
   seedHubCatalog,
   setDocumentStatus,
 } from '../services/hubFirestore';
-import { canManageContent, canManageUsers, formatFirestoreDate, getRoleLabel } from '../utils/formatters';
+import {
+  calculateSopReadingMinutes,
+  calculateTrainingReadingMinutes,
+  canManageContent,
+  canManageUsers,
+  formatFirestoreDate,
+  formatReadingTime,
+  getRoleLabel,
+  getSopReadingMinutes,
+  getTrainingReadingMinutes,
+} from '../utils/formatters';
 
 interface AdminManagementViewProps {
   userProfile: UserProfile;
@@ -287,6 +298,7 @@ export function AdminManagementView({
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-xs text-zinc-500">
                     <th className="py-3 px-4 font-medium">Code</th>
                     <th className="py-3 px-4 font-medium">Title</th>
+                    <th className="py-3 px-4 font-medium">Est. Read</th>
                     <th className="py-3 px-4 font-medium">Approval</th>
                     <th className="py-3 px-4 font-medium">Version</th>
                     <th className="py-3 px-4 font-medium">Status</th>
@@ -301,6 +313,9 @@ export function AdminManagementView({
                       <tr key={sop.id} className="hover:bg-zinc-50/70">
                         <td className="py-2.5 px-4 font-mono text-xs text-zinc-600">{sop.sopCode}</td>
                         <td className="py-2.5 px-4 font-medium text-zinc-900">{sop.title}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs tabular-nums text-zinc-600 whitespace-nowrap">
+                          {formatReadingTime(getSopReadingMinutes(sop))}
+                        </td>
                         <td className="py-2.5 px-4 text-xs text-zinc-600">{sop.approvalStatus}</td>
                         <td className="py-2.5 px-4 font-mono text-xs text-zinc-600">v{sop.version}</td>
                         <td className="py-2.5 px-4 text-xs capitalize text-zinc-600">{sop.status}</td>
@@ -413,6 +428,7 @@ export function AdminManagementView({
                   <tr className="border-b border-zinc-200 bg-zinc-50 text-xs text-zinc-500">
                     <th className="py-3 px-4 font-medium">Module Title</th>
                     <th className="py-3 px-4 font-medium">Category</th>
+                    <th className="py-3 px-4 font-medium">Est. Read</th>
                     <th className="py-3 px-4 font-medium">Linked Materials</th>
                     <th className="py-3 px-4 font-medium">Status</th>
                     <th className="py-3 px-4 font-medium text-right">Actions</th>
@@ -426,6 +442,9 @@ export function AdminManagementView({
                       <tr key={mod.id} className="hover:bg-zinc-50/70">
                         <td className="py-2.5 px-4 font-medium text-zinc-900">{mod.title}</td>
                         <td className="py-2.5 px-4 text-xs text-zinc-600">{cat?.title || mod.categoryId}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs tabular-nums text-zinc-600 whitespace-nowrap">
+                          {formatReadingTime(getTrainingReadingMinutes(mod))}
+                        </td>
                         <td className="py-2.5 px-4 font-mono text-xs text-zinc-600">{linksCount}/4 URLs set</td>
                         <td className="py-2.5 px-4 text-xs capitalize text-zinc-600">{mod.status}</td>
                         <td className="py-2.5 px-4 text-right whitespace-nowrap space-x-2">
@@ -997,6 +1016,16 @@ export function AdminManagementView({
               />
             </div>
 
+            <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-between gap-3 text-xs">
+              <span className="text-zinc-600 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[#9A732E]" />
+                Estimated Reading Time (auto-calculated from SOP content length)
+              </span>
+              <span className="font-mono font-semibold text-zinc-900 tabular-nums whitespace-nowrap">
+                {formatReadingTime(calculateSopReadingMinutes(editingSop))}
+              </span>
+            </div>
+
             <ModalActions onCancel={() => setEditingSop(null)} />
           </form>
         </ModalFrame>
@@ -1211,6 +1240,15 @@ export function AdminManagementView({
                 ]}
                 onChange={(v) => setEditingTraining({ ...editingTraining, status: v as ContentStatus })}
               />
+            </div>
+            <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-between gap-3 text-xs">
+              <span className="text-zinc-600 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[#9A732E]" />
+                Estimated Reading Time (auto-calculated from module content length)
+              </span>
+              <span className="font-mono font-semibold text-zinc-900 tabular-nums whitespace-nowrap">
+                {formatReadingTime(calculateTrainingReadingMinutes(editingTraining))}
+              </span>
             </div>
             <ModalActions onCancel={() => setEditingTraining(null)} />
           </form>

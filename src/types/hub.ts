@@ -64,6 +64,7 @@ export interface TrainingModule {
   relatedSopCode: string;
   relatedFormTitle: string;
   quizUrl: string;
+  estimatedReadingMinutes?: number;
   status: ContentStatus;
   updatedBy: string;
   createdAt?: unknown;
@@ -96,6 +97,7 @@ export interface SopDocument {
   version: string;
   relatedTrainingTitle: string;
   approvalStatus: 'Placeholder Template' | 'Management Approved';
+  estimatedReadingMinutes?: number;
   status: ContentStatus;
   updatedBy: string;
   createdAt?: unknown;

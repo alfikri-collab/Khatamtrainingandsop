@@ -76,12 +76,13 @@
         "relatedSopCode": { "type": "string", "maxLength": 60 },
         "relatedFormTitle": { "type": "string", "maxLength": 180 },
         "quizUrl": { "type": "string", "maxLength": 500 },
+        "estimatedReadingMinutes": { "type": "integer", "description": "Estimated reading time in minutes based on content length." },
         "status": { "type": "string", "enum": ["published", "draft", "archived"] },
         "updatedBy": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["categoryId", "title", "description", "learningObjectives", "materialsSummary", "pdfUrl", "videoUrl", "driveUrl", "relatedSopCode", "relatedFormTitle", "quizUrl", "status", "updatedBy", "createdAt", "updatedAt"]
+      "required": ["categoryId", "title", "description", "learningObjectives", "materialsSummary", "pdfUrl", "videoUrl", "driveUrl", "relatedSopCode", "relatedFormTitle", "quizUrl", "estimatedReadingMinutes", "status", "updatedBy", "createdAt", "updatedAt"]
     },
     "SopCategory": {
       "title": "SopCategory",
@@ -116,12 +117,13 @@
         "version": { "type": "string", "maxLength": 20 },
         "relatedTrainingTitle": { "type": "string", "maxLength": 180 },
         "approvalStatus": { "type": "string", "enum": ["Placeholder Template", "Management Approved"] },
+        "estimatedReadingMinutes": { "type": "integer", "description": "Estimated reading time in minutes based on content length." },
         "status": { "type": "string", "enum": ["published", "draft", "archived"] },
         "updatedBy": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["sopCode", "title", "categoryId", "purpose", "scope", "personInCharge", "procedures", "reminders", "relatedDocuments", "pdfUrl", "version", "relatedTrainingTitle", "approvalStatus", "status", "updatedBy", "createdAt", "updatedAt"]
+      "required": ["sopCode", "title", "categoryId", "purpose", "scope", "personInCharge", "procedures", "reminders", "relatedDocuments", "pdfUrl", "version", "relatedTrainingTitle", "approvalStatus", "estimatedReadingMinutes", "status", "updatedBy", "createdAt", "updatedAt"]
     },
     "QuickLink": {
       "title": "QuickLink",

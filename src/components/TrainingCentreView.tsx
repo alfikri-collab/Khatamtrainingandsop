@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
+  Clock,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -17,7 +18,13 @@ import type {
   UserProfile,
   UserProgress,
 } from '../types/hub';
-import { canManageContent, formatFirestoreDate, isSafeExternalUrl } from '../utils/formatters';
+import {
+  canManageContent,
+  formatFirestoreDate,
+  formatReadingTime,
+  getTrainingReadingMinutes,
+  isSafeExternalUrl,
+} from '../utils/formatters';
 import { HubIcon } from './IconResolver';
 
 interface TrainingCentreViewProps {
@@ -262,8 +269,9 @@ export function TrainingCentreView({
                     <div>
                       <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 mb-2">
                         <span>{cat ? `${cat.code}. ${cat.title}` : 'Training Module'}</span>
-                        <span className="font-mono tabular-nums">
-                          Updated {formatFirestoreDate(mod.updatedAt)}
+                        <span className="inline-flex items-center gap-1 font-mono tabular-nums whitespace-nowrap shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                          {formatReadingTime(getTrainingReadingMinutes(mod))}
                         </span>
                       </div>
                       <button
@@ -320,8 +328,15 @@ export function TrainingCentreView({
           <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs text-zinc-500 font-mono">
-                  Last Updated {formatFirestoreDate(activeModule.updatedAt)} · Related SOP: {activeModule.relatedSopCode || 'None'}
+                <p className="text-xs text-zinc-500 font-mono flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
+                  <span>Last Updated {formatFirestoreDate(activeModule.updatedAt)}</span>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 text-zinc-700 font-medium">
+                    <Clock className="w-3.5 h-3.5 text-[#9A732E]" />
+                    {formatReadingTime(getTrainingReadingMinutes(activeModule))}
+                  </span>
+                  <span>·</span>
+                  <span>Related SOP: {activeModule.relatedSopCode || 'None'}</span>
                 </p>
                 <h2 className="text-xl font-semibold text-zinc-900 mt-0.5">
                   {activeModule.title}

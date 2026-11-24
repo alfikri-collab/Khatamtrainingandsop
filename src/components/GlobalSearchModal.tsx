@@ -17,7 +17,12 @@ import type {
   SopDocument,
   TrainingModule,
 } from '../types/hub';
-import { isSafeExternalUrl } from '../utils/formatters';
+import {
+  formatReadingTime,
+  getSopReadingMinutes,
+  getTrainingReadingMinutes,
+  isSafeExternalUrl,
+} from '../utils/formatters';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -264,7 +269,7 @@ export function GlobalSearchModal({
                             {sop.title}
                           </p>
                           <p className="text-xs text-zinc-500 truncate">
-                            <span className="font-mono">{sop.sopCode}</span> · v{sop.version} · {sop.approvalStatus}
+                            <span className="font-mono">{sop.sopCode}</span> · v{sop.version} · {formatReadingTime(getSopReadingMinutes(sop))} · {sop.approvalStatus}
                           </p>
                         </div>
                         <span className="text-xs font-medium text-[#78561D] shrink-0">
@@ -298,7 +303,7 @@ export function GlobalSearchModal({
                             {mod.title}
                           </p>
                           <p className="text-xs text-zinc-500 truncate">
-                            {mod.description}
+                            {formatReadingTime(getTrainingReadingMinutes(mod))} · {mod.description}
                           </p>
                         </div>
                         <span className="text-xs font-medium text-[#78561D] shrink-0">
