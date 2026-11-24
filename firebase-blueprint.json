@@ -1,0 +1,294 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Khatam retail employee profile and role assignment.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "RETAIL_MANAGEMENT", "AREA_SUPERVISOR", "OUTLET_MANAGER", "RETAIL_STAFF"]
+        },
+        "outletName": { "type": "string", "maxLength": 120 },
+        "department": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "role", "outletName", "department", "status", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII record containing employee email address.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "RoleDefinition": {
+      "title": "RoleDefinition",
+      "description": "Role-based access control metadata for Khatam Retail Hub.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 40 },
+        "label": { "type": "string", "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 400 },
+        "canManageContent": { "type": "boolean" },
+        "canManageUsers": { "type": "boolean" },
+        "sortOrder": { "type": "integer" }
+      },
+      "required": ["code", "label", "description", "canManageContent", "canManageUsers", "sortOrder"]
+    },
+    "TrainingCategory": {
+      "title": "TrainingCategory",
+      "description": "Category grouping for retail training modules.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 10 },
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 400 },
+        "iconName": { "type": "string", "maxLength": 50 },
+        "sortOrder": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "title", "description", "iconName", "sortOrder", "isActive", "updatedAt"]
+    },
+    "TrainingModule": {
+      "title": "TrainingModule",
+      "description": "Structured retail training module with links and learning objectives.",
+      "type": "object",
+      "properties": {
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 180 },
+        "description": { "type": "string", "maxLength": 800 },
+        "learningObjectives": { "type": "array", "maxLength": 10 },
+        "materialsSummary": { "type": "string", "maxLength": 2000 },
+        "pdfUrl": { "type": "string", "maxLength": 500 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "driveUrl": { "type": "string", "maxLength": 500 },
+        "relatedSopCode": { "type": "string", "maxLength": 60 },
+        "relatedFormTitle": { "type": "string", "maxLength": 180 },
+        "quizUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["categoryId", "title", "description", "learningObjectives", "materialsSummary", "pdfUrl", "videoUrl", "driveUrl", "relatedSopCode", "relatedFormTitle", "quizUrl", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "SopCategory": {
+      "title": "SopCategory",
+      "description": "Operational function category for SOP documents.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 10 },
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 400 },
+        "iconName": { "type": "string", "maxLength": 50 },
+        "sortOrder": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "title", "description", "iconName", "sortOrder", "isActive", "updatedAt"]
+    },
+    "SopDocument": {
+      "title": "SopDocument",
+      "description": "Retail standard operating procedure record with versioning and editable placeholder state.",
+      "type": "object",
+      "properties": {
+        "sopCode": { "type": "string", "maxLength": 40 },
+        "title": { "type": "string", "maxLength": 180 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "purpose": { "type": "string", "maxLength": 1000 },
+        "scope": { "type": "string", "maxLength": 500 },
+        "personInCharge": { "type": "string", "maxLength": 200 },
+        "procedures": { "type": "array", "maxLength": 20 },
+        "reminders": { "type": "array", "maxLength": 10 },
+        "relatedDocuments": { "type": "string", "maxLength": 500 },
+        "pdfUrl": { "type": "string", "maxLength": 500 },
+        "version": { "type": "string", "maxLength": 20 },
+        "relatedTrainingTitle": { "type": "string", "maxLength": 180 },
+        "approvalStatus": { "type": "string", "enum": ["Placeholder Template", "Management Approved"] },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sopCode", "title", "categoryId", "purpose", "scope", "personInCharge", "procedures", "reminders", "relatedDocuments", "pdfUrl", "version", "relatedTrainingTitle", "approvalStatus", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "QuickLink": {
+      "title": "QuickLink",
+      "description": "Configurable quick link card to retail systems, sheets, or forms.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 400 },
+        "category": {
+          "type": "string",
+          "enum": ["Sales & Reporting", "Inventory & Stock", "HR & Staff Management", "Visual Merchandising", "Operations & Administration", "Learning & Development"]
+        },
+        "url": { "type": "string", "maxLength": 500 },
+        "iconName": { "type": "string", "maxLength": 50 },
+        "accessInstructions": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category", "url", "iconName", "accessInstructions", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "FormTemplate": {
+      "title": "FormTemplate",
+      "description": "Retail operational form, checklist, or spreadsheet template link.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 140 },
+        "description": { "type": "string", "maxLength": 400 },
+        "category": {
+          "type": "string",
+          "enum": ["Daily Operations Forms", "Stock & Inventory Forms", "HR Forms", "Sales Reporting Templates", "VM Checklists", "Incident Reports", "Training Forms"]
+        },
+        "formatType": {
+          "type": "string",
+          "enum": ["Google Form", "Google Sheet", "Google Doc", "PDF", "Excel", "Word"]
+        },
+        "url": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category", "formatType", "url", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "FaqEntry": {
+      "title": "FaqEntry",
+      "description": "Frequently asked retail operations question with SOP reference and link.",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string", "maxLength": 300 },
+        "answer": { "type": "string", "maxLength": 1500 },
+        "category": { "type": "string", "maxLength": 80 },
+        "sopRef": { "type": "string", "maxLength": 60 },
+        "quickLinkUrl": { "type": "string", "maxLength": 500 },
+        "quickLinkLabel": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answer", "category", "sopRef", "quickLinkUrl", "quickLinkLabel", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Retail management update, SOP release, or operational announcement.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 180 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "category": {
+          "type": "string",
+          "enum": ["Operational", "New SOP", "Revised Procedure", "Training", "System Maintenance", "Campaign"]
+        },
+        "priority": { "type": "string", "enum": ["High", "Normal", "Low"] },
+        "relatedUrl": { "type": "string", "maxLength": 500 },
+        "relatedLabel": { "type": "string", "maxLength": 120 },
+        "publishedDate": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category", "priority", "relatedUrl", "relatedLabel", "publishedDate", "status", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "VersionHistoryEntry": {
+      "title": "VersionHistoryEntry",
+      "description": "Audit log of document and content updates.",
+      "type": "object",
+      "properties": {
+        "entityType": { "type": "string", "enum": ["sop", "training", "quickLink", "form", "faq", "announcement"] },
+        "entityId": { "type": "string", "maxLength": 128 },
+        "entityTitle": { "type": "string", "maxLength": 200 },
+        "version": { "type": "string", "maxLength": 30 },
+        "changeSummary": { "type": "string", "maxLength": 500 },
+        "changedBy": { "type": "string", "maxLength": 128 },
+        "changedByName": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["entityType", "entityId", "entityTitle", "version", "changeSummary", "changedBy", "changedByName", "createdAt"]
+    },
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Employee training completion or SOP acknowledgement record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "itemType": { "type": "string", "enum": ["training", "sop"] },
+        "itemId": { "type": "string", "maxLength": 128 },
+        "itemTitle": { "type": "string", "maxLength": 200 },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "itemType", "itemId", "itemTitle", "completedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Employee profile and role mapping."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "PII-isolated private user metadata (email)."
+    },
+    "/users/{userId}/progress/{progressId}": {
+      "schema": { "$ref": "#/entities/UserProgress" },
+      "description": "Employee training completion and SOP acknowledgement records."
+    },
+    "/roles/{roleId}": {
+      "schema": { "$ref": "#/entities/RoleDefinition" },
+      "description": "Role permission definitions."
+    },
+    "/trainingCategories/{categoryId}": {
+      "schema": { "$ref": "#/entities/TrainingCategory" },
+      "description": "Training categories A-G."
+    },
+    "/trainingModules/{moduleId}": {
+      "schema": { "$ref": "#/entities/TrainingModule" },
+      "description": "Training library modules."
+    },
+    "/sopCategories/{categoryId}": {
+      "schema": { "$ref": "#/entities/SopCategory" },
+      "description": "SOP functional categories A-H."
+    },
+    "/sopDocuments/{sopId}": {
+      "schema": { "$ref": "#/entities/SopDocument" },
+      "description": "SOP documents and templates."
+    },
+    "/quickLinks/{linkId}": {
+      "schema": { "$ref": "#/entities/QuickLink" },
+      "description": "Quick links to systems, sheets, and portals."
+    },
+    "/formsTemplates/{formId}": {
+      "schema": { "$ref": "#/entities/FormTemplate" },
+      "description": "Operational forms and spreadsheet templates."
+    },
+    "/faqs/{faqId}": {
+      "schema": { "$ref": "#/entities/FaqEntry" },
+      "description": "Frequently asked questions."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/Announcement" },
+      "description": "Management announcements and operational updates."
+    },
+    "/versionHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/VersionHistoryEntry" },
+      "description": "Version audit trail for SOP and training updates."
+    }
+  }
+}

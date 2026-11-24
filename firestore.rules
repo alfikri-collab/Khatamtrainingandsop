@@ -1,0 +1,377 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'alfikri@khatam.com.my';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+      );
+    }
+
+    function isManagement() {
+      return isAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'RETAIL_MANAGEMENT' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+      );
+    }
+
+    function isStringBounded(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isStringListBounded(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems && (arr.size() == 0 || arr[0] is string);
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'outletName', 'department', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'role', 'outletName', 'department', 'status', 'avatarUrl', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        isStringBounded(data.displayName, 1, 120) &&
+        data.role in ['ADMIN', 'RETAIL_MANAGEMENT', 'AREA_SUPERVISOR', 'OUTLET_MANAGER', 'RETAIL_STAFF'] &&
+        isStringBounded(data.outletName, 0, 120) &&
+        isStringBounded(data.department, 0, 120) &&
+        data.status in ['active', 'inactive'] &&
+        (!('avatarUrl' in data) || isStringBounded(data.avatarUrl, 0, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'updatedAt']) &&
+        data.uid == userId &&
+        isStringBounded(data.email, 3, 254) &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidUserProgress(data, userId) {
+      return data.keys().hasAll(['uid', 'itemType', 'itemId', 'itemTitle', 'completedAt']) &&
+        data.keys().hasOnly(['uid', 'itemType', 'itemId', 'itemTitle', 'completedAt']) &&
+        data.uid == userId &&
+        data.itemType in ['training', 'sop'] &&
+        isValidId(data.itemId) &&
+        isStringBounded(data.itemTitle, 1, 200) &&
+        data.completedAt == request.time;
+    }
+
+    function isValidRoleDefinition(data) {
+      return data.keys().hasAll(['code', 'label', 'description', 'canManageContent', 'canManageUsers', 'sortOrder']) &&
+        data.keys().hasOnly(['code', 'label', 'description', 'canManageContent', 'canManageUsers', 'sortOrder']) &&
+        data.code in ['ADMIN', 'RETAIL_MANAGEMENT', 'AREA_SUPERVISOR', 'OUTLET_MANAGER', 'RETAIL_STAFF'] &&
+        isStringBounded(data.label, 1, 80) &&
+        isStringBounded(data.description, 1, 400) &&
+        data.canManageContent is bool &&
+        data.canManageUsers is bool &&
+        data.sortOrder is int;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']) &&
+        data.keys().hasOnly(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']) &&
+        isStringBounded(data.code, 1, 10) &&
+        isStringBounded(data.title, 1, 120) &&
+        isStringBounded(data.description, 0, 400) &&
+        isStringBounded(data.iconName, 1, 50) &&
+        data.sortOrder is int &&
+        data.isActive is bool &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidTrainingModule(data) {
+      return data.keys().hasAll(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isValidId(data.categoryId) &&
+        isStringBounded(data.title, 1, 180) &&
+        isStringBounded(data.description, 0, 800) &&
+        isStringListBounded(data.learningObjectives, 10) &&
+        isStringBounded(data.materialsSummary, 0, 2000) &&
+        isStringBounded(data.pdfUrl, 0, 500) &&
+        isStringBounded(data.videoUrl, 0, 500) &&
+        isStringBounded(data.driveUrl, 0, 500) &&
+        isStringBounded(data.relatedSopCode, 0, 60) &&
+        isStringBounded(data.relatedFormTitle, 0, 180) &&
+        isStringBounded(data.quizUrl, 0, 500) &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidSopDocument(data) {
+      return data.keys().hasAll(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isStringBounded(data.sopCode, 1, 40) &&
+        isStringBounded(data.title, 1, 180) &&
+        isValidId(data.categoryId) &&
+        isStringBounded(data.purpose, 0, 1000) &&
+        isStringBounded(data.scope, 0, 500) &&
+        isStringBounded(data.personInCharge, 0, 200) &&
+        isStringListBounded(data.procedures, 20) &&
+        isStringListBounded(data.reminders, 10) &&
+        isStringBounded(data.relatedDocuments, 0, 500) &&
+        isStringBounded(data.pdfUrl, 0, 500) &&
+        isStringBounded(data.version, 1, 20) &&
+        isStringBounded(data.relatedTrainingTitle, 0, 180) &&
+        data.approvalStatus in ['Placeholder Template', 'Management Approved'] &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidQuickLink(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'url', 'iconName', 'accessInstructions', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['title', 'description', 'category', 'url', 'iconName', 'accessInstructions', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isStringBounded(data.title, 1, 120) &&
+        isStringBounded(data.description, 0, 400) &&
+        data.category in ['Sales & Reporting', 'Inventory & Stock', 'HR & Staff Management', 'Visual Merchandising', 'Operations & Administration', 'Learning & Development'] &&
+        isStringBounded(data.url, 0, 500) &&
+        isStringBounded(data.iconName, 1, 50) &&
+        isStringBounded(data.accessInstructions, 0, 400) &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidFormTemplate(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'formatType', 'url', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['title', 'description', 'category', 'formatType', 'url', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isStringBounded(data.title, 1, 140) &&
+        isStringBounded(data.description, 0, 400) &&
+        data.category in ['Daily Operations Forms', 'Stock & Inventory Forms', 'HR Forms', 'Sales Reporting Templates', 'VM Checklists', 'Incident Reports', 'Training Forms'] &&
+        data.formatType in ['Google Form', 'Google Sheet', 'Google Doc', 'PDF', 'Excel', 'Word'] &&
+        isStringBounded(data.url, 0, 500) &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidFaq(data) {
+      return data.keys().hasAll(['question', 'answer', 'category', 'sopRef', 'quickLinkUrl', 'quickLinkLabel', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['question', 'answer', 'category', 'sopRef', 'quickLinkUrl', 'quickLinkLabel', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isStringBounded(data.question, 1, 300) &&
+        isStringBounded(data.answer, 1, 1500) &&
+        isStringBounded(data.category, 1, 80) &&
+        isStringBounded(data.sopRef, 0, 60) &&
+        isStringBounded(data.quickLinkUrl, 0, 500) &&
+        isStringBounded(data.quickLinkLabel, 0, 120) &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'priority', 'relatedUrl', 'relatedLabel', 'publishedDate', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['title', 'description', 'category', 'priority', 'relatedUrl', 'relatedLabel', 'publishedDate', 'status', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isStringBounded(data.title, 1, 180) &&
+        isStringBounded(data.description, 1, 1500) &&
+        data.category in ['Operational', 'New SOP', 'Revised Procedure', 'Training', 'System Maintenance', 'Campaign'] &&
+        data.priority in ['High', 'Normal', 'Low'] &&
+        isStringBounded(data.relatedUrl, 0, 500) &&
+        isStringBounded(data.relatedLabel, 0, 120) &&
+        isStringBounded(data.publishedDate, 4, 30) &&
+        data.status in ['published', 'draft', 'archived'] &&
+        data.updatedBy == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidVersionHistory(data) {
+      return data.keys().hasAll(['entityType', 'entityId', 'entityTitle', 'version', 'changeSummary', 'changedBy', 'changedByName', 'createdAt']) &&
+        data.keys().hasOnly(['entityType', 'entityId', 'entityTitle', 'version', 'changeSummary', 'changedBy', 'changedByName', 'createdAt']) &&
+        data.entityType in ['sop', 'training', 'quickLink', 'form', 'faq', 'announcement'] &&
+        isValidId(data.entityId) &&
+        isStringBounded(data.entityTitle, 1, 200) &&
+        isStringBounded(data.version, 1, 30) &&
+        isStringBounded(data.changeSummary, 1, 500) &&
+        data.changedBy == request.auth.uid &&
+        isStringBounded(data.changedByName, 1, 120) &&
+        data.createdAt == request.time;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (incoming().role == 'RETAIL_STAFF' || isBootstrappedAdmin());
+      allow update: if isValidId(userId) && isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'outletName', 'department', 'status', 'avatarUrl', 'updatedAt'])) ||
+          (isOwner(userId) && incoming().role == existing().role && incoming().status == existing().status && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'outletName', 'department', 'avatarUrl', 'updatedAt']))
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      match /private/{docId} {
+        allow get: if isValidId(userId) && docId == 'info' && (isOwner(userId) || isAdmin());
+        allow list: if false;
+        allow create: if isValidId(userId) && docId == 'info' && isOwner(userId) && isValidUserPrivateInfo(incoming(), userId);
+        allow update: if isValidId(userId) && docId == 'info' && isOwner(userId) && isValidUserPrivateInfo(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt']);
+        allow delete: if false;
+      }
+
+      match /progress/{progressId} {
+        allow get: if isValidId(userId) && isValidId(progressId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || (isBootstrappedAdmin() && resource.data.uid == userId));
+        allow create: if isValidId(userId) && isValidId(progressId) && isOwner(userId) && isValidUserProgress(incoming(), userId);
+        allow update: if isValidId(userId) && isValidId(progressId) && isOwner(userId) && isValidUserProgress(incoming(), userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['itemTitle', 'completedAt']);
+        allow delete: if isValidId(userId) && isValidId(progressId) && isOwner(userId);
+      }
+    }
+
+    match /roles/{roleId} {
+      allow get: if isValidId(roleId) && isVerifiedUser();
+      allow list: if isVerifiedUser() && resource.data.sortOrder >= 1;
+      allow create: if isValidId(roleId) && isAdmin() && isValidRoleDefinition(incoming());
+      allow update: if isValidId(roleId) && isAdmin() && isValidRoleDefinition(incoming()) &&
+        incoming().code == existing().code &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['label', 'description', 'canManageContent', 'canManageUsers', 'sortOrder']);
+      allow delete: if isValidId(roleId) && isAdmin();
+    }
+
+    match /trainingCategories/{categoryId} {
+      allow get: if isValidId(categoryId) && isVerifiedUser();
+      allow list: if isVerifiedUser() && (resource.data.isActive == true || isBootstrappedAdmin());
+      allow create: if isValidId(categoryId) && isManagement() && isValidCategory(incoming());
+      allow update: if isValidId(categoryId) && isManagement() && isValidCategory(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']);
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /trainingModules/{moduleId} {
+      allow get: if isValidId(moduleId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(moduleId) && isManagement() && isValidTrainingModule(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/trainingCategories/$(incoming().categoryId));
+      allow update: if isValidId(moduleId) && isManagement() && isValidTrainingModule(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['categoryId', 'title', 'description', 'learningObjectives', 'materialsSummary', 'pdfUrl', 'videoUrl', 'driveUrl', 'relatedSopCode', 'relatedFormTitle', 'quizUrl', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(moduleId) && isAdmin();
+    }
+
+    match /sopCategories/{categoryId} {
+      allow get: if isValidId(categoryId) && isVerifiedUser();
+      allow list: if isVerifiedUser() && (resource.data.isActive == true || isBootstrappedAdmin());
+      allow create: if isValidId(categoryId) && isManagement() && isValidCategory(incoming());
+      allow update: if isValidId(categoryId) && isManagement() && isValidCategory(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']);
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /sopDocuments/{sopId} {
+      allow get: if isValidId(sopId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(sopId) && isManagement() && isValidSopDocument(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/sopCategories/$(incoming().categoryId));
+      allow update: if isValidId(sopId) && isManagement() && isValidSopDocument(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['sopCode', 'title', 'categoryId', 'purpose', 'scope', 'personInCharge', 'procedures', 'reminders', 'relatedDocuments', 'pdfUrl', 'version', 'relatedTrainingTitle', 'approvalStatus', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(sopId) && isAdmin();
+    }
+
+    match /quickLinks/{linkId} {
+      allow get: if isValidId(linkId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(linkId) && isManagement() && isValidQuickLink(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(linkId) && isManagement() && isValidQuickLink(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'url', 'iconName', 'accessInstructions', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(linkId) && isAdmin();
+    }
+
+    match /formsTemplates/{formId} {
+      allow get: if isValidId(formId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(formId) && isManagement() && isValidFormTemplate(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(formId) && isManagement() && isValidFormTemplate(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'formatType', 'url', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(formId) && isAdmin();
+    }
+
+    match /faqs/{faqId} {
+      allow get: if isValidId(faqId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(faqId) && isManagement() && isValidFaq(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(faqId) && isManagement() && isValidFaq(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['question', 'answer', 'category', 'sopRef', 'quickLinkUrl', 'quickLinkLabel', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(faqId) && isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow get: if isValidId(announcementId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
+      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow create: if isValidId(announcementId) && isManagement() && isValidAnnouncement(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(announcementId) && isManagement() && isValidAnnouncement(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'priority', 'relatedUrl', 'relatedLabel', 'publishedDate', 'status', 'updatedBy', 'updatedAt']);
+      allow delete: if isValidId(announcementId) && isAdmin();
+    }
+
+    match /versionHistory/{historyId} {
+      allow get: if isValidId(historyId) && isVerifiedUser();
+      allow list: if isVerifiedUser() && resource.data.entityType in ['sop', 'training', 'quickLink', 'form', 'faq', 'announcement'];
+      allow create: if isValidId(historyId) && isManagement() && isValidVersionHistory(incoming());
+      allow update: if false;
+      allow delete: if isValidId(historyId) && isAdmin();
+    }
+  }
+}

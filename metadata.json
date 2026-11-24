@@ -1,0 +1,6 @@
+{
+  "name": "Khatam Retail Learning & Operations Hub",
+  "description": "Centralised digital reference platform for Khatam Retail training modules, operational SOPs, quick links, forms, FAQs, and management updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
