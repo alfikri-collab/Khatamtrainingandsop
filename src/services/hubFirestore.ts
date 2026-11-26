@@ -13,9 +13,7 @@ import {
   writeBatch,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { User } from 'firebase/auth';
 import {
-  BOOTSTRAPPED_ADMIN_EMAIL,
   OperationType,
   db,
   handleFirestoreError,
@@ -54,90 +52,6 @@ import {
 function sanitizeId(raw: string): string {
   const cleaned = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
   return cleaned || `item_${Date.now()}`;
-}
-
-export async function ensureUserProfile(firebaseUser: User): Promise<UserProfile> {
-  const uid = firebaseUser.uid;
-  const userPath = `users/${uid}`;
-  const privatePath = `users/${uid}/private/info`;
-  const userRef = doc(db, 'users', uid);
-  const privateRef = doc(db, 'users', uid, 'private', 'info');
-
-  try {
-    const snap = await getDoc(userRef);
-    const isPrimaryAdmin =
-      firebaseUser.email?.toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL.toLowerCase() &&
-      firebaseUser.emailVerified;
-
-    if (!snap.exists()) {
-      const newProfile: UserProfile = {
-        uid,
-        displayName: (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Khatam Employee').slice(0, 120),
-        role: isPrimaryAdmin ? 'ADMIN' : 'RETAIL_STAFF',
-        outletName: isPrimaryAdmin ? 'HQ Retail Operations' : 'Khatam Retail Outlet',
-        department: isPrimaryAdmin ? 'Retail Management' : 'Retail Operations',
-        status: 'active',
-        avatarUrl: (firebaseUser.photoURL || '').slice(0, 500),
-      };
-
-      await setDoc(userRef, {
-        ...newProfile,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      if (firebaseUser.email) {
-        await setDoc(privateRef, {
-          uid,
-          email: firebaseUser.email.slice(0, 254),
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      return { ...newProfile, email: firebaseUser.email || undefined };
-    }
-
-    const existing = snap.data() as UserProfile;
-    let email = firebaseUser.email || undefined;
-    try {
-      const privSnap = await getDoc(privateRef);
-      if (privSnap.exists()) {
-        email = (privSnap.data() as { email?: string }).email || email;
-      } else if (firebaseUser.email) {
-        await setDoc(privateRef, {
-          uid,
-          email: firebaseUser.email.slice(0, 254),
-          updatedAt: serverTimestamp(),
-        });
-      }
-    } catch {
-      // Non-fatal fallback to auth email
-    }
-
-    return {
-      ...existing,
-      email,
-    };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, userPath || privatePath);
-  }
-}
-
-export async function updateOwnProfile(
-  uid: string,
-  updates: { displayName: string; outletName: string; department: string }
-): Promise<void> {
-  const path = `users/${uid}`;
-  try {
-    await updateDoc(doc(db, 'users', uid), {
-      displayName: updates.displayName.trim().slice(0, 120),
-      outletName: updates.outletName.trim().slice(0, 120),
-      department: updates.department.trim().slice(0, 120),
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
-  }
 }
 
 export async function adminUpdateUser(

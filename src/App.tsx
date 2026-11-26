@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import {
   Bell,
   BookOpen,
@@ -8,27 +7,25 @@ import {
   HelpCircle,
   LayoutDashboard,
   Link2,
-  LogOut,
   Megaphone,
   Menu,
   Search,
   Settings,
   X,
 } from 'lucide-react';
+import { testConnection } from './lib/firebase';
+import { subscribeCollection } from './services/hubFirestore';
 import {
-  BOOTSTRAPPED_ADMIN_EMAIL,
-  auth,
-  googleAuthProvider,
-  testConnection,
-} from './lib/firebase';
-import {
-  checkCatalogNeedsSeed,
-  ensureUserProfile,
-  seedHubCatalog,
-  subscribeCollection,
-  toggleUserProgressItem,
-  updateOwnProfile,
-} from './services/hubFirestore';
+  SEED_ROLES,
+  buildSeedAnnouncements,
+  buildSeedFaqs,
+  buildSeedForms,
+  buildSeedQuickLinks,
+  buildSeedSopCategories,
+  buildSeedSopDocuments,
+  buildSeedTrainingCategories,
+  buildSeedTrainingModules,
+} from './data/seedCatalog';
 import type {
   Announcement,
   FaqEntry,
@@ -45,7 +42,6 @@ import type {
   VersionHistoryEntry,
 } from './types/hub';
 import { canManageContent, getRoleLabel } from './utils/formatters';
-import { SignInScreen } from './components/SignInScreen';
 import { DashboardView } from './components/DashboardView';
 import { TrainingCentreView } from './components/TrainingCentreView';
 import { SopLibraryView } from './components/SopLibraryView';
@@ -73,11 +69,57 @@ const NAV_ITEMS: Array<{
   { id: 'admin', label: 'Admin Management', icon: Settings, requiresManagement: true },
 ];
 
+const WORKSPACE_PROFILE_STORAGE_KEY = 'khatam_hub_workspace_profile_v1';
+const WORKSPACE_PROGRESS_STORAGE_KEY = 'khatam_hub_progress_v1';
+
+const DEFAULT_WORKSPACE_PROFILE: UserProfile = {
+  uid: 'khatam_retail_workspace',
+  displayName: 'Khatam Retail Team',
+  role: 'RETAIL_STAFF',
+  outletName: 'Khatam Retail',
+  department: 'Retail Operations',
+  status: 'active',
+};
+
+function loadWorkspaceProfile(): UserProfile {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_PROFILE_STORAGE_KEY);
+    if (!raw) return DEFAULT_WORKSPACE_PROFILE;
+    const parsed = JSON.parse(raw) as Partial<UserProfile>;
+    return {
+      ...DEFAULT_WORKSPACE_PROFILE,
+      displayName: parsed.displayName?.trim() || DEFAULT_WORKSPACE_PROFILE.displayName,
+      outletName: parsed.outletName?.trim() || DEFAULT_WORKSPACE_PROFILE.outletName,
+      department: parsed.department?.trim() || DEFAULT_WORKSPACE_PROFILE.department,
+    };
+  } catch {
+    return DEFAULT_WORKSPACE_PROFILE;
+  }
+}
+
+function loadLocalProgress(): UserProgress[] {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_PROGRESS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as UserProgress[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+const FALLBACK_TRAINING_CATEGORIES = buildSeedTrainingCategories();
+const FALLBACK_TRAINING_MODULES = buildSeedTrainingModules('seed_catalog');
+const FALLBACK_SOP_CATEGORIES = buildSeedSopCategories();
+const FALLBACK_SOP_DOCUMENTS = buildSeedSopDocuments('seed_catalog');
+const FALLBACK_QUICK_LINKS = buildSeedQuickLinks('seed_catalog');
+const FALLBACK_FORMS = buildSeedForms('seed_catalog');
+const FALLBACK_FAQS = buildSeedFaqs('seed_catalog');
+const FALLBACK_ANNOUNCEMENTS = buildSeedAnnouncements('seed_catalog');
+const FALLBACK_ROLES: RoleDefinition[] = SEED_ROLES.map((r) => ({ id: r.code, ...r }));
+
 export default function App() {
-  const [authReady, setAuthReady] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [seeding, setSeeding] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => loadWorkspaceProfile());
 
   // Navigation & Deep-Link State
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
@@ -94,115 +136,84 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileDraft, setProfileDraft] = useState({
-    displayName: '',
-    outletName: '',
-    department: '',
+    displayName: userProfile.displayName,
+    outletName: userProfile.outletName,
+    department: userProfile.department,
   });
 
-  // Firestore Live Data
-  const [trainingCategories, setTrainingCategories] = useState<TrainingCategory[]>([]);
-  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
-  const [sopCategories, setSopCategories] = useState<SopCategory[]>([]);
-  const [sopDocuments, setSopDocuments] = useState<SopDocument[]>([]);
-  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
-  const [formsTemplates, setFormsTemplates] = useState<FormTemplate[]>([]);
-  const [faqs, setFaqs] = useState<FaqEntry[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
-  const [roles, setRoles] = useState<RoleDefinition[]>([]);
-  const [usersList, setUsersList] = useState<UserProfile[]>([]);
-  const [progressItems, setProgressItems] = useState<UserProgress[]>([]);
-
-  const isPrimaryAdmin = Boolean(
-    userProfile?.email?.toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL.toLowerCase()
+  // Firestore Live Data (with default catalog fallback until/unless populated in Firestore)
+  const [trainingCategories, setTrainingCategories] = useState<TrainingCategory[]>(
+    FALLBACK_TRAINING_CATEGORIES
   );
+  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>(
+    FALLBACK_TRAINING_MODULES
+  );
+  const [sopCategories, setSopCategories] = useState<SopCategory[]>(FALLBACK_SOP_CATEGORIES);
+  const [sopDocuments, setSopDocuments] = useState<SopDocument[]>(FALLBACK_SOP_DOCUMENTS);
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(FALLBACK_QUICK_LINKS);
+  const [formsTemplates, setFormsTemplates] = useState<FormTemplate[]>(FALLBACK_FORMS);
+  const [faqs, setFaqs] = useState<FaqEntry[]>(FALLBACK_FAQS);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(FALLBACK_ANNOUNCEMENTS);
+  const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
+  const [roles, setRoles] = useState<RoleDefinition[]>(FALLBACK_ROLES);
+  const [progressItems, setProgressItems] = useState<UserProgress[]>(() => loadLocalProgress());
 
-  // Startup connection check & Auth listener
+  // Startup connection check & Firestore public catalog subscriptions
   useEffect(() => {
     void testConnection();
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUserProfile(null);
-        setAuthReady(true);
-        return;
-      }
-      try {
-        const profile = await ensureUserProfile(firebaseUser);
-        setUserProfile(profile);
-        setProfileDraft({
-          displayName: profile.displayName,
-          outletName: profile.outletName,
-          department: profile.department,
-        });
-
-        const isAdminEmail =
-          firebaseUser.email?.toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL.toLowerCase() &&
-          firebaseUser.emailVerified;
-
-        if (isAdminEmail) {
-          const needsSeed = await checkCatalogNeedsSeed();
-          if (needsSeed) {
-            setSeeding(true);
-            try {
-              await seedHubCatalog(profile.uid, profile.displayName);
-            } finally {
-              setSeeding(false);
-            }
-          }
-        }
-      } catch (err) {
-        setAuthError(err instanceof Error ? err.message : 'Unable to load employee profile.');
-      } finally {
-        setAuthReady(true);
-      }
-    });
-
-    return () => unsub();
-  }, []);
-
-  // Subscribe to Firestore collections once authenticated
-  useEffect(() => {
-    if (!authReady || !userProfile) return;
-
-    const onlyPub = !isPrimaryAdmin;
-    const onlyActCat = !isPrimaryAdmin;
 
     const unsubs = [
       subscribeCollection<TrainingCategory>(
         'trainingCategories',
-        { onlyActiveCategory: onlyActCat },
-        setTrainingCategories
+        { onlyActiveCategory: true },
+        (items) => {
+          if (items.length > 0) setTrainingCategories(items);
+        }
       ),
       subscribeCollection<TrainingModule>(
         'trainingModules',
-        { onlyPublished: onlyPub },
-        setTrainingModules
+        { onlyPublished: true },
+        (items) => {
+          if (items.length > 0) setTrainingModules(items);
+        }
       ),
       subscribeCollection<SopCategory>(
         'sopCategories',
-        { onlyActiveCategory: onlyActCat },
-        setSopCategories
+        { onlyActiveCategory: true },
+        (items) => {
+          if (items.length > 0) setSopCategories(items);
+        }
       ),
       subscribeCollection<SopDocument>(
         'sopDocuments',
-        { onlyPublished: onlyPub },
-        setSopDocuments
+        { onlyPublished: true },
+        (items) => {
+          if (items.length > 0) setSopDocuments(items);
+        }
       ),
       subscribeCollection<QuickLink>(
         'quickLinks',
-        { onlyPublished: onlyPub },
-        setQuickLinks
+        { onlyPublished: true },
+        (items) => {
+          if (items.length > 0) setQuickLinks(items);
+        }
       ),
       subscribeCollection<FormTemplate>(
         'formsTemplates',
-        { onlyPublished: onlyPub },
-        setFormsTemplates
+        { onlyPublished: true },
+        (items) => {
+          if (items.length > 0) setFormsTemplates(items);
+        }
       ),
-      subscribeCollection<FaqEntry>('faqs', { onlyPublished: onlyPub }, setFaqs),
+      subscribeCollection<FaqEntry>('faqs', { onlyPublished: true }, (items) => {
+        if (items.length > 0) setFaqs(items);
+      }),
       subscribeCollection<Announcement>(
         'announcements',
-        { onlyPublished: onlyPub },
-        setAnnouncements
+        { onlyPublished: true },
+        (items) => {
+          if (items.length > 0) setAnnouncements(items);
+        }
       ),
       subscribeCollection<VersionHistoryEntry>('versionHistory', {}, (items) => {
         setVersionHistory(
@@ -213,22 +224,15 @@ export default function App() {
           })
         );
       }),
-      subscribeCollection<RoleDefinition>('roles', {}, setRoles),
-      subscribeCollection<UserProgress>(
-        'progress',
-        { userProgressUid: userProfile.uid },
-        setProgressItems
-      ),
+      subscribeCollection<RoleDefinition>('roles', {}, (items) => {
+        if (items.length > 0) setRoles(items);
+      }),
     ];
-
-    if (isPrimaryAdmin) {
-      unsubs.push(subscribeCollection<UserProfile>('users', {}, setUsersList));
-    }
 
     return () => {
       unsubs.forEach((u) => u());
     };
-  }, [authReady, userProfile, isPrimaryAdmin]);
+  }, []);
 
   // Global Cmd+K / Ctrl+K shortcut
   useEffect(() => {
@@ -242,20 +246,34 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const handleSignIn = async () => {
-    setAuthError(null);
-    try {
-      await signInWithPopup(auth, googleAuthProvider);
-    } catch (err) {
-      setAuthError(
-        err instanceof Error ? err.message : 'Google Sign-In could not be completed.'
-      );
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut(auth);
-    setActiveSection('dashboard');
+  const handleToggleLocalProgress = async (
+    itemType: 'training' | 'sop',
+    itemId: string,
+    itemTitle: string,
+    currentlyCompleted: boolean
+  ) => {
+    const progressId = `${itemType}_${itemId}`;
+    setProgressItems((prev) => {
+      const next = currentlyCompleted
+        ? prev.filter((p) => p.id !== progressId)
+        : [
+            ...prev.filter((p) => p.id !== progressId),
+            {
+              id: progressId,
+              uid: userProfile.uid,
+              itemType,
+              itemId,
+              itemTitle,
+              completedAt: new Date().toISOString(),
+            },
+          ];
+      try {
+        localStorage.setItem(WORKSPACE_PROGRESS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore storage quota errors
+      }
+      return next;
+    });
   };
 
   const handleNavigate = (section: NavSection, itemId?: string) => {
@@ -418,21 +436,6 @@ export default function App() {
     sopDocuments,
   ]);
 
-  if (!authReady) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
-        <div className="text-center space-y-2">
-          <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-600">Loading Khatam Retail Hub...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return <SignInScreen onSignIn={handleSignIn} error={authError} />;
-  }
-
   return (
     <div className="min-h-screen bg-zinc-50 flex">
       {/* Desktop Sidebar */}
@@ -464,14 +467,18 @@ export default function App() {
         <div className="p-3 border-t border-zinc-200">
           <button
             type="button"
-            onClick={() => setProfileModalOpen(true)}
+            onClick={() => {
+              setProfileDraft({
+                displayName: userProfile.displayName,
+                outletName: userProfile.outletName,
+                department: userProfile.department,
+              });
+              setProfileModalOpen(true);
+            }}
             className="w-full p-2.5 rounded-lg hover:bg-zinc-50 flex items-center gap-3 text-left transition-colors cursor-pointer"
           >
             <img
-              src={
-                userProfile.avatarUrl ||
-                '/src/assets/images/avatar_retail_lead_1795408356576.jpg'
-              }
+              src="/src/assets/images/avatar_retail_lead_1795408356576.jpg"
               alt={userProfile.displayName}
               referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-full object-cover border border-zinc-200 shrink-0"
@@ -481,7 +488,7 @@ export default function App() {
                 {userProfile.displayName}
               </p>
               <p className="text-xs text-zinc-500 truncate">
-                {getRoleLabel(userProfile.role)}
+                {userProfile.outletName || getRoleLabel(userProfile.role)}
               </p>
             </div>
           </button>
@@ -529,16 +536,6 @@ export default function App() {
                 );
               })}
             </nav>
-            <div className="p-3 border-t border-zinc-200">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-700 border border-zinc-200 rounded-lg hover:bg-zinc-50"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
-            </div>
           </aside>
         </div>
       )}
@@ -610,15 +607,6 @@ export default function App() {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 border border-zinc-200 rounded-lg hover:bg-zinc-50 whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
-
               {/* Notifications Popover */}
               {notificationsOpen && (
                 <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white border border-zinc-200 rounded-xl shadow-lg p-4 z-40">
@@ -670,13 +658,6 @@ export default function App() {
           }}
         />
 
-        {/* Seeding / Initialization Notice */}
-        {seeding && (
-          <div className="bg-zinc-900 text-white text-xs px-6 py-2.5 text-center">
-            Initializing Khatam Retail Learning &amp; Operations Hub catalog...
-          </div>
-        )}
-
         {/* Viewport Container */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeSection === 'dashboard' && (
@@ -708,7 +689,7 @@ export default function App() {
               onSelectCategory={setSelectedTrainingCategoryId}
               onSelectModule={setSelectedTrainingModuleId}
               onToggleComplete={(mod, done) =>
-                toggleUserProgressItem(userProfile.uid, 'training', mod.id, mod.title, done)
+                handleToggleLocalProgress('training', mod.id, mod.title, done)
               }
               onJumpToSop={handleJumpToSop}
               onNavigate={handleNavigate}
@@ -726,8 +707,7 @@ export default function App() {
               onSelectCategory={setSelectedSopCategoryId}
               onSelectSop={setSelectedSopId}
               onToggleAcknowledge={(sop, ack) =>
-                toggleUserProgressItem(
-                  userProfile.uid,
+                handleToggleLocalProgress(
                   'sop',
                   sop.id,
                   `${sop.sopCode} — ${sop.title}`,
@@ -778,7 +758,7 @@ export default function App() {
           {activeSection === 'admin' && (
             <AdminManagementView
               userProfile={userProfile}
-              isPrimaryAdmin={isPrimaryAdmin}
+              isPrimaryAdmin={false}
               trainingCategories={trainingCategories}
               trainingModules={trainingModules}
               sopCategories={sopCategories}
@@ -789,7 +769,7 @@ export default function App() {
               announcements={announcements}
               versionHistory={versionHistory}
               roles={roles}
-              usersList={usersList}
+              usersList={[]}
             />
           )}
         </main>
@@ -818,47 +798,45 @@ export default function App() {
         onNavigate={handleNavigate}
       />
 
-      {/* Employee Profile Modal */}
+      {/* Outlet / Workspace Preferences Modal */}
       {profileModalOpen && (
         <div
           className="fixed inset-0 z-50 bg-zinc-950/50 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Employee Profile"
+          aria-label="Outlet Preferences"
         >
           <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-zinc-900">Employee Profile</h2>
+              <h2 className="text-base font-semibold text-zinc-900">Outlet Preferences</h2>
               <button
                 type="button"
                 onClick={() => setProfileModalOpen(false)}
                 className="p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-100 cursor-pointer"
-                aria-label="Close profile dialog"
+                aria-label="Close preferences dialog"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form
               className="p-6 space-y-4"
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                await updateOwnProfile(userProfile.uid, profileDraft);
-                setUserProfile({ ...userProfile, ...profileDraft });
+                const updated: UserProfile = {
+                  ...userProfile,
+                  displayName: profileDraft.displayName.trim() || DEFAULT_WORKSPACE_PROFILE.displayName,
+                  outletName: profileDraft.outletName.trim() || DEFAULT_WORKSPACE_PROFILE.outletName,
+                  department: profileDraft.department.trim() || DEFAULT_WORKSPACE_PROFILE.department,
+                };
+                setUserProfile(updated);
+                try {
+                  localStorage.setItem(WORKSPACE_PROFILE_STORAGE_KEY, JSON.stringify(updated));
+                } catch {
+                  // Ignore storage quota errors
+                }
                 setProfileModalOpen(false);
               }}
             >
-              <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 text-xs space-y-1">
-                <p className="text-zinc-500">
-                  Email: <span className="text-zinc-900 font-medium">{userProfile.email}</span>
-                </p>
-                <p className="text-zinc-500">
-                  Assigned Role:{' '}
-                  <span className="font-mono font-semibold text-[#78561D]">
-                    {userProfile.role}
-                  </span>
-                </p>
-              </div>
-
               <label className="block">
                 <span className="text-xs font-medium text-zinc-700 block mb-1">Display Name</span>
                 <input
@@ -896,29 +874,20 @@ export default function App() {
                 />
               </label>
 
-              <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
+              <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={handleSignOut}
-                  className="text-xs font-medium text-red-700 hover:underline cursor-pointer"
+                  onClick={() => setProfileModalOpen(false)}
+                  className="px-3.5 py-2 text-xs font-medium text-zinc-700 border border-zinc-200 rounded-lg hover:bg-zinc-50 cursor-pointer"
                 >
-                  Sign Out
+                  Cancel
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setProfileModalOpen(false)}
-                    className="px-3.5 py-2 text-xs font-medium text-zinc-700 border border-zinc-200 rounded-lg hover:bg-zinc-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-xs font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 cursor-pointer"
-                  >
-                    Save Profile
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 cursor-pointer"
+                >
+                  Save Preferences
+                </button>
               </div>
             </form>
           </div>

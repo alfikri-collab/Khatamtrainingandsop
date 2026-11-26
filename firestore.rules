@@ -273,8 +273,8 @@ service cloud.firestore {
     }
 
     match /roles/{roleId} {
-      allow get: if isValidId(roleId) && isVerifiedUser();
-      allow list: if isVerifiedUser() && resource.data.sortOrder >= 1;
+      allow get: if isValidId(roleId);
+      allow list: if resource.data.sortOrder >= 1;
       allow create: if isValidId(roleId) && isAdmin() && isValidRoleDefinition(incoming());
       allow update: if isValidId(roleId) && isAdmin() && isValidRoleDefinition(incoming()) &&
         incoming().code == existing().code &&
@@ -283,8 +283,8 @@ service cloud.firestore {
     }
 
     match /trainingCategories/{categoryId} {
-      allow get: if isValidId(categoryId) && isVerifiedUser();
-      allow list: if isVerifiedUser() && (resource.data.isActive == true || isBootstrappedAdmin());
+      allow get: if isValidId(categoryId) && (existing().isActive == true || isManagement());
+      allow list: if resource.data.isActive == true || isBootstrappedAdmin();
       allow create: if isValidId(categoryId) && isManagement() && isValidCategory(incoming());
       allow update: if isValidId(categoryId) && isManagement() && isValidCategory(incoming()) &&
         incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']);
@@ -292,8 +292,8 @@ service cloud.firestore {
     }
 
     match /trainingModules/{moduleId} {
-      allow get: if isValidId(moduleId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(moduleId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(moduleId) && isManagement() && isValidTrainingModule(incoming()) &&
         'estimatedReadingMinutes' in incoming() &&
         incoming().createdAt == request.time &&
@@ -305,8 +305,8 @@ service cloud.firestore {
     }
 
     match /sopCategories/{categoryId} {
-      allow get: if isValidId(categoryId) && isVerifiedUser();
-      allow list: if isVerifiedUser() && (resource.data.isActive == true || isBootstrappedAdmin());
+      allow get: if isValidId(categoryId) && (existing().isActive == true || isManagement());
+      allow list: if resource.data.isActive == true || isBootstrappedAdmin();
       allow create: if isValidId(categoryId) && isManagement() && isValidCategory(incoming());
       allow update: if isValidId(categoryId) && isManagement() && isValidCategory(incoming()) &&
         incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'description', 'iconName', 'sortOrder', 'isActive', 'updatedAt']);
@@ -314,8 +314,8 @@ service cloud.firestore {
     }
 
     match /sopDocuments/{sopId} {
-      allow get: if isValidId(sopId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(sopId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(sopId) && isManagement() && isValidSopDocument(incoming()) &&
         'estimatedReadingMinutes' in incoming() &&
         incoming().createdAt == request.time &&
@@ -327,8 +327,8 @@ service cloud.firestore {
     }
 
     match /quickLinks/{linkId} {
-      allow get: if isValidId(linkId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(linkId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(linkId) && isManagement() && isValidQuickLink(incoming()) &&
         incoming().createdAt == request.time;
       allow update: if isValidId(linkId) && isManagement() && isValidQuickLink(incoming()) &&
@@ -338,8 +338,8 @@ service cloud.firestore {
     }
 
     match /formsTemplates/{formId} {
-      allow get: if isValidId(formId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(formId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(formId) && isManagement() && isValidFormTemplate(incoming()) &&
         incoming().createdAt == request.time;
       allow update: if isValidId(formId) && isManagement() && isValidFormTemplate(incoming()) &&
@@ -349,8 +349,8 @@ service cloud.firestore {
     }
 
     match /faqs/{faqId} {
-      allow get: if isValidId(faqId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(faqId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(faqId) && isManagement() && isValidFaq(incoming()) &&
         incoming().createdAt == request.time;
       allow update: if isValidId(faqId) && isManagement() && isValidFaq(incoming()) &&
@@ -360,8 +360,8 @@ service cloud.firestore {
     }
 
     match /announcements/{announcementId} {
-      allow get: if isValidId(announcementId) && isVerifiedUser() && (existing().status == 'published' || isManagement());
-      allow list: if isVerifiedUser() && (resource.data.status == 'published' || isBootstrappedAdmin());
+      allow get: if isValidId(announcementId) && (existing().status == 'published' || isManagement());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
       allow create: if isValidId(announcementId) && isManagement() && isValidAnnouncement(incoming()) &&
         incoming().createdAt == request.time;
       allow update: if isValidId(announcementId) && isManagement() && isValidAnnouncement(incoming()) &&
@@ -371,8 +371,8 @@ service cloud.firestore {
     }
 
     match /versionHistory/{historyId} {
-      allow get: if isValidId(historyId) && isVerifiedUser();
-      allow list: if isVerifiedUser() && resource.data.entityType in ['sop', 'training', 'quickLink', 'form', 'faq', 'announcement'];
+      allow get: if isValidId(historyId) && existing().entityType in ['sop', 'training', 'quickLink', 'form', 'faq', 'announcement'];
+      allow list: if resource.data.entityType in ['sop', 'training', 'quickLink', 'form', 'faq', 'announcement'];
       allow create: if isValidId(historyId) && isManagement() && isValidVersionHistory(incoming());
       allow update: if false;
       allow delete: if isValidId(historyId) && isAdmin();
